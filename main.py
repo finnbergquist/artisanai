@@ -5,7 +5,6 @@ from pydantic import BaseModel, constr
 from typing import List
 from context import ContextType
 from bot import get_openai_response
-import time
 import os
 app = FastAPI()
 
@@ -25,7 +24,6 @@ app.add_middleware(
 
 # In-memory storage for messages
 messages = []
-message_id_counter = 1
 
 
 class Message(BaseModel):
@@ -55,32 +53,28 @@ def create_message(msg: Message):
     Returns:
         List[Message]: The list containing the new message and the bot's response.
     """
-    global message_id_counter
     new_message = Message(
-        id=message_id_counter,
+        id=msg.id,
         message=msg.message,
         sender=msg.sender,
         timestamp=msg.timestamp,
         context=msg.context
     )
     messages.append(new_message)
-    message_id_counter += 1
 
     bot_response = get_openai_response(messages, msg.context)
     
 
     # Simulating a bot response
     bot_response = Message(
-        id=message_id_counter,
+        id=msg.id+1,
         message=bot_response,
         sender="bot",
         timestamp=msg.timestamp,
         context=msg.context 
     )
     messages.append(bot_response)
-    message_id_counter += 1
-    time.sleep(3)
-    return [new_message, bot_response]
+    return [bot_response]
 
 @app.put("/api/messages/{id}", response_model=Message)
 def edit_message(id: int, msg: Message):
@@ -126,5 +120,4 @@ def new_chat():
     """
     global messages, message_id_counter
     messages = []  # Clear the current chat messages
-    message_id_counter = 1
     return {"message": "Chat cleared successfully."}
